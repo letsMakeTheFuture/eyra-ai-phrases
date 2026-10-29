@@ -5,8 +5,12 @@ class PhraseProvider(ABC):
     name = "base"
 
     @abstractmethod
-    def suggest(self, situation: str) -> list[str]:
-        """Return up to 3 short phrases for a situation."""
+    def suggest(self, situation: str, context: str = "") -> list[str]:
+        """Up to 3 short phrases for a situation the user chose."""
+
+    @abstractmethod
+    def answer(self, question: str, context: str = "") -> list[str]:
+        """Up to 3 short replies to a question someone asked the user."""
 
 
 class MockProvider(PhraseProvider):
@@ -19,8 +23,10 @@ class MockProvider(PhraseProvider):
                  "Please call a doctor."],
         "NEED": ["I need some water.", "I need to rest.",
                  "I need something, please wait."],
-        "ANSWER": ["Yes.", "No.", "I am not sure yet."],
     }
 
-    def suggest(self, situation):
+    def suggest(self, situation, context=""):
         return self.PHRASES.get(situation.upper(), [])
+
+    def answer(self, question, context=""):
+        return ["Yes.", "No.", "I am not sure."]
