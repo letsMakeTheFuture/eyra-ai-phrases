@@ -116,6 +116,8 @@ class PhrasesWindow(QWidget):
 
         self.buttons, self.options, self.index = [], [], 0
         self.worker = self.speaker = None
+        self.history = []          # last things actually spoken (memory only)
+        self.pending_question = ""
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.advance)
 
@@ -173,10 +175,18 @@ class PhrasesWindow(QWidget):
             self.eye.stop()
         event.accept()
 
-    # ---- screens ----
+    # ---- context sent to the model ----
     def context(self):
-        return self.context_box.text().strip()
+        parts = []
+        note = self.context_box.text().strip()
+        if note:
+            parts.append(f"Caregiver note: {note}")
+        if self.history:
+            parts.append("Recent conversation, oldest first: "
+                         + " ".join(self.history))
+        return " ".join(parts)
 
+    # ---- screens ----
     def show_home(self):
         self.question_box.hide()
         self.source.setText("")
@@ -184,7 +194,13 @@ class PhrasesWindow(QWidget):
         opts = [("Someone asked me a question", self.show_question)]
         opts += [(label, lambda c=code, l=label: self.request("situation", l, c))
                  for label, code in SITUATIONS]
+        if self.history:
+            opts.append(("Start a new conversation", self.new_conversation))
         self.set_options("What do you want to say?", opts)
+
+    def new_conversation(self):
+        self.history = []
+        self.show_home()
 
     def show_question(self):
         self.set_options("Someone is asking you something...",
@@ -202,6 +218,7 @@ class PhrasesWindow(QWidget):
         self.request("answer", question)
 
     def request(self, mode, text, code=""):
+        self.pending_question = text if mode == "answer" else ""
         self.set_options("Asking the AI for phrases...", [])
         self.worker = PhraseWorker(mode, text, self.context(), code)
         self.worker.done.connect(self.show_phrases)
@@ -224,6 +241,10 @@ class PhrasesWindow(QWidget):
         self.set_options(f"Say this?  \"{phrase}\"", opts)
 
     def speak(self, phrase):
+        asked = (f'Someone asked: "{self.pending_question}". '
+                 if self.pending_question else "")
+        self.history.append(f'{asked}The user said: "{phrase}".')
+        self.history = self.history[-4:]
         self.set_options("Speaking...", [])
         self.speaker = Speaker(phrase)
         self.speaker.finished.connect(self.show_home)

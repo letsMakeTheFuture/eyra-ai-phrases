@@ -32,7 +32,7 @@ class MuseSparkProvider(PhraseProvider):
         return phrases
 
     def _context(self, context):
-        return f" Extra context from their caregiver: {context}." if context else ""
+                return f" Extra context: {context}." if context else ""
 
     def suggest(self, situation, context=""):
         return self._ask(
