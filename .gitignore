@@ -221,3 +221,4 @@ __marimo__/
 serviceAccountKey.json
 *.key
 *.env
+*.task
