@@ -10,11 +10,16 @@ and the app speaks it. Nothing is ever spoken without the user's confirmation.
 Everything in this repository was written during the hackathon:
 
 - Reply suggestions from Muse Spark Open (served through Baseten)
-- Reply mode: a helper types the question, the model suggests 3 replies
+- Reply mode: a helper types the question, or taps a ready-made one, and the
+  model suggests 3 replies
+- Quick questions screen (hungry, thirsty, in pain, toilet, too hot or cold)
+  so the helper does not have to type
 - Situation buttons (help / pain / need) that work with no typing at all
 - Short-term conversation memory (last 4 spoken exchanges)
 - Optional helper note (where we are, who is here)
-- Scanning screen with blink selection (hold eyes closed ~1 second)
+- Scanning screen with blink selection (hold eyes closed for under a second)
+- Blink detection with plain OpenCV image processing and no pretrained model
+  (see "Blink switch" below)
 - Confirm screen (SPEAK / CANCEL) before anything is spoken
 - Replies in the language of the question (tested with English, French, Arabic)
 - Labeled fallback: if the AI cannot be reached, fixed phrases are shown
@@ -30,13 +35,31 @@ needed to run this project.
 ## Models and external services (full disclosure)
 
 - **Meta Muse Spark Open** (`meta-models/muse-spark-open`) through Baseten:
-  writes every reply suggestion at runtime.
-- **MediaPipe Face Landmarker** (Google): detects eye closure only, to act
-  as a blink switch. It runs locally. The model file is downloaded once on
-  first run. `--keyboard` mode runs without it.
+  writes every reply suggestion at runtime. It is the only AI model the
+  application calls.
+- **Blink detection** uses plain OpenCV and NumPy image processing on the
+  camera image. It does not use any pretrained model, face detector,
+  Haar cascade or neural network. The organizers confirmed on the hackathon
+  Discord that plain OpenCV without a pretrained model is allowed.
 - **Windows system voices** through `pyttsx3`: read the chosen reply aloud,
   locally. This is not an AI model call.
 - No other cloud AI service is used.
+
+### Removed code (visible in git history only)
+
+Earlier commits during the event contained a Google speech-to-text feature
+and a MediaPipe-based blink detector. Both were removed before submission
+because the rules require every model called at runtime to be a Meta model.
+Neither is part of the current code.
+
+## Blink switch
+
+The camera does not use face tracking. At start-up the helper draws a box
+around one eye. The app then asks the user to keep the eye open and then
+closed (a beep marks each step), measures the box with five simple image
+measures, and automatically keeps the one that separates open from closed
+best. Holding the eye closed for a short moment selects the highlighted
+option, and the eye must reopen before the next selection.
 
 ## Privacy
 
@@ -51,24 +74,26 @@ needed to run this project.
 ## Install and run
 
 1. Python 3.12 is recommended.
-2. `pip install -r requirements.txt`
+2. `pip install -r requirements.txt` (use `opencv-python`, not the headless
+   version, because the setup window needs it)
 3. Create a `.env` file containing: `BASETEN_API_KEY=your_key_here`
 4. Run:
-   - `python phrases_screen.py` (blink input, needs a webcam)
-   - `python phrases_screen.py --keyboard` (SPACE key instead of blink)
+   - `python phrases_screen.py` (blink input, needs a webcam; follow the
+     setup beeps)
+   - `python phrases_screen.py --keyboard` (SPACE key instead of blink;
+     any single switch can drive it)
 
 ## Known limitations
 
-- The question is typed by a helper. Voice input is planned future work
-  (Meta's Muse Voice Transcribe is only available through Meta's own API,
-  which I could not access because of billing restrictions).
+- The question is typed or tapped by a helper. Voice input is planned future
+  work (Meta's Muse Voice Transcribe is only available through Meta's own
+  API, which I could not access because of billing restrictions).
+- Blink detection without a pretrained model is less robust and less
+  comfortable than face tracking. It needs steady light, a fixed camera
+  and head position after setup, and a new setup at every start. The hold
+  time can be changed with `hold_seconds` in `eye_switch.py`.
 - Speech depends on installed Windows voices. French needs the French voice
   pack. Arabic replies are shown on screen, but Arabic speech did not work
   with `pyttsx3` on my machine.
-- Blink timing may need adjusting per user (`hold_seconds` and
-  `closed_threshold` in `eye_switch.py`).
 - Not yet tested with real users. Suggestions can be wrong, which is why
   the user always confirms first.
-- The MediaPipe question is unresolved: the organizers have not ruled on
-  whether non-generative models count under the "Meta models only" rule.
-  It is disclosed here, and the project also runs in `--keyboard` mode.
