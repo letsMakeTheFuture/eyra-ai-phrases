@@ -1,5 +1,4 @@
 import sys
-import speech_recognition as sr
 import pyttsx3
 from PyQt5.QtCore import Qt, QThread, QTimer, pyqtSignal
 from PyQt5.QtWidgets import (QApplication, QWidget, QVBoxLayout, QLabel,
@@ -21,7 +20,6 @@ except Exception as e:
     BlinkSwitch = None
 
 SCAN_MS = 1200
-LISTEN_LANG = "en-US"   # later: "fr-FR" or "ar-DZ"
 
 SITUATIONS = [
     ("I need help", "HELP"),
@@ -75,25 +73,6 @@ class Speaker(QThread):
         engine.stop()
 
 
-class Listener(QThread):
-    heard = pyqtSignal(str)
-    failed = pyqtSignal(str)
-
-    def run(self):
-        r = sr.Recognizer()
-        try:
-            with sr.Microphone() as mic:
-                r.adjust_for_ambient_noise(mic, duration=0.5)
-                audio = r.listen(mic, timeout=8, phrase_time_limit=12)
-            self.heard.emit(r.recognize_google(audio, language=LISTEN_LANG))
-        except sr.WaitTimeoutError:
-            self.failed.emit("I heard nothing")
-        except sr.UnknownValueError:
-            self.failed.emit("I could not understand")
-        except Exception as e:
-            self.failed.emit(f"Microphone problem: {e}")
-
-
 class PhrasesWindow(QWidget):
     def __init__(self):
         super().__init__()
@@ -136,7 +115,7 @@ class PhrasesWindow(QWidget):
         root.addWidget(self.hint)
 
         self.buttons, self.options, self.index = [], [], 0
-        self.worker = self.speaker = self.listener = None
+        self.worker = self.speaker = None
         self.history = []          # last things actually spoken (memory only)
         self.pending_question = ""
         self.timer = QTimer(self)
@@ -212,8 +191,7 @@ class PhrasesWindow(QWidget):
         self.question_box.hide()
         self.source.setText("")
         self.setFocus()
-        opts = [("Listen to the question", self.listen),
-                ("Someone asked me a question", self.show_question)]
+        opts = [("Someone asked me a question", self.show_question)]
         opts += [(label, lambda c=code, l=label: self.request("situation", l, c))
                  for label, code in SITUATIONS]
         if self.history:
@@ -223,18 +201,6 @@ class PhrasesWindow(QWidget):
     def new_conversation(self):
         self.history = []
         self.show_home()
-
-    def listen(self):
-        self.set_options("Listening... ask your question now", [])
-        self.listener = Listener()
-        self.listener.heard.connect(lambda text: self.request("answer", text))
-        self.listener.failed.connect(self.listen_failed)
-        self.listener.start()
-
-    def listen_failed(self, reason):
-        self.set_options(f"{reason}. Try again?",
-                         [("Listen again", self.listen),
-                          ("<- Back", self.show_home)])
 
     def show_question(self):
         self.set_options("Someone is asking you something...",
