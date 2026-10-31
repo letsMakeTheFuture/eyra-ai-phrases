@@ -1,3 +1,4 @@
+import re
 import sys
 import pyttsx3
 from PyQt5.QtCore import Qt, QThread, QTimer, pyqtSignal
@@ -60,6 +61,28 @@ class PhraseWorker(QThread):
             self.done.emit(mock.suggest(self.code, self.context), mock.name)
 
 
+def pick_voice(engine, text):
+    low = text.lower()
+    if re.search(r"[\u0600-\u06FF]", text):
+        wanted, lang = ("arab", "ar-", "ar_"), "arabic"
+    elif (re.search(r"[àâçéèêëîïôûùüÿœ]", low) or
+          re.search(r"\b(j|l|d|n|qu|c|s)'", low) or
+          re.search(r"\b(je|tu|vous|nous|oui|non|merci|besoin|aide|veux|"
+                    r"voudrais|suis|ai|pas|faim|soif|mal|plaisir|bien|avec|"
+                    r"pour|un|une|le|la|les|des|du|de|mon|ma|mes)\b", low)):
+        wanted, lang = ("french", "fr-", "fr_", "hortense"), "french"
+    else:
+        print("Voice: default (no French or Arabic detected)")
+        return
+    for v in engine.getProperty("voices"):
+        label = (v.id + " " + v.name).lower()
+        if any(w in label for w in wanted):
+            engine.setProperty("voice", v.id)
+            print("Voice:", v.name)
+            return
+    print(f"Voice: no installed {lang} voice found, using default")
+
+
 class Speaker(QThread):
     def __init__(self, text):
         super().__init__()
@@ -67,11 +90,11 @@ class Speaker(QThread):
 
     def run(self):
         engine = pyttsx3.init()
+        pick_voice(engine, self.text)
         engine.setProperty("rate", 150)
         engine.say(self.text)
         engine.runAndWait()
         engine.stop()
-
 
 class PhrasesWindow(QWidget):
     def __init__(self):

@@ -34,12 +34,15 @@ class MuseSparkProvider(PhraseProvider):
     def _context(self, context):
                 return f" Extra context: {context}." if context else ""
 
+   
+
     def suggest(self, situation, context=""):
         return self._ask(
             "You help a person who cannot speak communicate."
             f" Situation they chose: {situation}.{self._context(context)}"
             " Write exactly 3 short, polite, first-person phrases"
             " (max 10 words each), one per line, no numbering, no quotes."
+            " Never give medical advice or instructions."
         )
 
     def answer(self, question, context=""):
@@ -49,5 +52,7 @@ class MuseSparkProvider(PhraseProvider):
             " Write exactly 3 different short first-person replies they might"
             " want to give (max 10 words each), such as a yes, a no, and an"
             " uncertain or other reply when it makes sense."
+            " Write the replies in the same language as the question."
+            " Never give medical advice or instructions."
             " One per line, no numbering, no quotes."
         )
