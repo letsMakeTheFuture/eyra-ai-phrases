@@ -3,4 +3,4 @@ pyttsx3
 openai
 python-dotenv
 opencv-python
-mediapipe
+numpy
