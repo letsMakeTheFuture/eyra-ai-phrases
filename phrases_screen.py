@@ -28,10 +28,25 @@ SITUATIONS = [
     ("I need something", "NEED"),
 ]
 
+# Ready-made questions so the helper can tap instead of typing.
+QUICK_QUESTIONS = [
+    "Are you hungry?",
+    "Are you thirsty?",
+    "Are you in pain?",
+    "Do you need the toilet?",
+    "Are you too hot or too cold?",
+]
+
 IDLE = ("font-size:30pt; padding:22px; color:#94A3B8; background:#1C2128;"
         "border:2px solid #334155; border-radius:25px;")
 ACTIVE = ("font-size:30pt; padding:22px; color:white; background:#0369A1;"
           "border:8px solid #50C878; border-radius:25px;")
+# Smaller buttons, used when a screen has more than 4 options so it fits
+# on a 1366x768 display.
+IDLE_SMALL = ("font-size:22pt; padding:8px; color:#94A3B8; background:#1C2128;"
+              "border:2px solid #334155; border-radius:18px;")
+ACTIVE_SMALL = ("font-size:22pt; padding:8px; color:white; background:#0369A1;"
+                "border:6px solid #50C878; border-radius:18px;")
 INPUT = ("font-size:18pt; padding:10px; color:#E2E8F0; background:#161B22;"
          "border:2px solid #4169E1; border-radius:12px;")
 
@@ -95,6 +110,7 @@ class Speaker(QThread):
         engine.say(self.text)
         engine.runAndWait()
         engine.stop()
+
 
 class PhrasesWindow(QWidget):
     def __init__(self):
@@ -164,9 +180,11 @@ class PhrasesWindow(QWidget):
             b.deleteLater()
         self.buttons = []
         self.options = options
-        for label, _ in options:
+        for label, action in options:
             b = QPushButton(label)
             b.setFocusPolicy(Qt.NoFocus)
+            # A helper can also tap an option with the mouse.
+            b.clicked.connect(lambda _checked=False, a=action: a())
             self.box.addWidget(b)
             self.buttons.append(b)
         self.index = 0
@@ -177,8 +195,11 @@ class PhrasesWindow(QWidget):
             self.timer.stop()
 
     def refresh(self):
+        small = len(self.buttons) > 4
+        idle = IDLE_SMALL if small else IDLE
+        active = ACTIVE_SMALL if small else ACTIVE
         for i, b in enumerate(self.buttons):
-            b.setStyleSheet(ACTIVE if i == self.index else IDLE)
+            b.setStyleSheet(active if i == self.index else idle)
 
     def advance(self):
         if self.options:
@@ -214,7 +235,8 @@ class PhrasesWindow(QWidget):
         self.question_box.hide()
         self.source.setText("")
         self.setFocus()
-        opts = [("Someone asked me a question", self.show_question)]
+        opts = [("Someone asked me a question", self.show_question),
+                ("Quick questions", self.show_quick)]
         opts += [(label, lambda c=code, l=label: self.request("situation", l, c))
                  for label, code in SITUATIONS]
         if self.history:
@@ -224,6 +246,12 @@ class PhrasesWindow(QWidget):
     def new_conversation(self):
         self.history = []
         self.show_home()
+
+    def show_quick(self):
+        opts = [(q, lambda q=q: self.request("answer", q))
+                for q in QUICK_QUESTIONS]
+        opts.append(("<- Back", self.show_home))
+        self.set_options("Choose a question to ask him", opts)
 
     def show_question(self):
         self.set_options("Someone is asking you something...",
