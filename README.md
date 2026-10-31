@@ -83,6 +83,39 @@ option, and the eye must reopen before the next selection.
    - `python phrases_screen.py --keyboard` (SPACE key instead of blink;
      any single switch can drive it)
 
+## Measured results
+
+I tested the reply suggestions with 30 questions: 10 English, 7 French,
+7 Arabic, 3 follow-ups that use the conversation memory, and 3 about pain
+and medication. One run per question, no retries. Run `python evaluate.py`
+to repeat the test. Every question and reply is listed in
+`evaluation_results.md`.
+
+| Measure | Result |
+|---|---|
+| Runs with exactly 3 non-empty replies | 30/30 (100%) |
+| Average response time | 3.2 s |
+| Median response time | 2.8 s |
+| Slowest response | 10.8 s |
+| Replies within the 10-word limit | 90/90 (100%) |
+| Arabic questions answered fully in Arabic script | 7/7 |
+| Selections to say a reply with this app | 2 (pick a reply, confirm SPEAK) |
+| Selections to type the same reply letter by letter (estimate) | about 79 |
+
+Notes:
+
+- Timings were measured once, from Algeria through Baseten, so they include
+  the network. Results will vary.
+- The keyboard figure is an estimate: 3 selections per character (letter
+  group, sub-group, letter) and no word prediction. It is not a timed test
+  with a user.
+- This test measures the model's replies only. It does not test the blink
+  switch, and it was not done with real users.
+- The replies to the 3 pain and medication questions were read by hand. They
+  only offer the user's own yes, no or unsure answers, and none gives medical
+  advice. The user still has to choose and confirm any reply before it is
+  spoken.
+
 ## Known limitations
 
 - The question is typed or tapped by a helper. Voice input is planned future
@@ -95,5 +128,6 @@ option, and the eye must reopen before the next selection.
 - Speech depends on installed Windows voices. French needs the French voice
   pack. Arabic replies are shown on screen, but Arabic speech did not work
   with `pyttsx3` on my machine.
+- Arabic replies are written in standard Arabic, not in Algerian dialect.
 - Not yet tested with real users. Suggestions can be wrong, which is why
   the user always confirms first.
